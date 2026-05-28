@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="comet">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CometSync - Galactic Social Platform</title>
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  <!-- EmailJS removed (OTP system removed) -->
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Connect across the cosmos. CometSync is a next-generation space-themed social media platform for astronomers, space enthusiasts, and cosmic explorers.">
+</head>
+<body>
+
+  <!-- Background Space Particle Canvas -->
+  <canvas id="space-canvas"></canvas>
+  <div id="gravitational-lens" class="gravitational-lens"></div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Story Fullscreen Viewer Modal -->
+  <div id="story-modal" class="modal story-modal hidden">
+    <div class="story-modal-content">
+      <div class="story-progress-bar">
+        <div class="story-progress-fill" id="story-progress-fill"></div>
+      </div>
+      <div class="story-modal-header">
+        <img src="" id="story-modal-avatar" alt="Avatar" class="avatar-sm">
+        <span id="story-modal-username">Username</span>
+        <span id="story-modal-time">12h ago</span>
+        <button id="story-close-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="story-modal-body">
+        <img src="" id="story-modal-image" alt="Story Content" class="story-image">
+        <p id="story-modal-caption" class="story-caption">Caption</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Avatar Selector Modal -->
+  <div id="avatar-modal" class="modal hidden">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h2>Choose Your Space Avatar</h2>
+        <button id="avatar-close-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="avatar-grid" id="avatar-selection-grid">
+        <!-- Avatars will be injected by JS -->
+      </div>
+      <div class="avatar-upload-option">
+        <p>Or input your own custom image URL:</p>
+        <div class="flex-row">
+          <input type="url" id="custom-avatar-url" placeholder="https://example.com/avatar.png" class="glass-input">
+          <button id="save-custom-avatar" class="btn primary-btn">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Community Modal -->
+  <div id="community-modal" class="modal hidden">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h2>Launch a Cosmic Community</h2>
+        <button id="community-close-btn" class="close-btn">&times;</button>
+      </div>
+      <form id="create-community-form">
+        <div class="input-group">
+          <label for="comm-name">Community Name (e.g. c/NebulaChasers)</label>
+          <input type="text" id="comm-name" placeholder="NebulaChasers" required class="glass-input">
+        </div>
+        <div class="input-group">
+          <label for="comm-topic">Topic / Subject</label>
+          <input type="text" id="comm-topic" placeholder="Astrophotography, Rocketry, Exoplanets..." required class="glass-input">
+        </div>
+        <div class="input-group">
+          <label for="comm-description">Description</label>
+          <textarea id="comm-description" placeholder="Describe the mission of this orbital community..." required class="glass-input" rows="3"></textarea>
+        </div>
+        <div class="input-group checkbox-group">
+          <label class="checkbox-container">
+            <input type="checkbox" checked disabled>
+            <span class="checkmark"></span>
+            Public Access (Anyone can join)
+          </label>
+        </div>
+        <button type="submit" class="btn primary-btn btn-full">Establish Orbit</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== AUTHENTICATION GATEWAY ==================== -->
+  <div id="auth-gateway" class="auth-gateway">
+    <div class="auth-box glass">
+      <div class="auth-brand">
+        <div class="brand-logo-glow">☄️</div>
+        <h1>CometSync</h1>
+        <p class="brand-tagline">Orbiting thoughts in the digital universe</p>
+      </div>
+
+      <!-- PANEL 1: LOGIN -->
+      <div id="login-panel" class="auth-panel">
+        <h2>Enter Coordinates</h2>
+        <form id="login-form">
+          <div class="input-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" required class="glass-input" placeholder="traveler@galaxy.com">
+          </div>
+          <div class="input-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" required class="glass-input" placeholder="••••••••">
+          </div>
+          <div class="auth-actions">
+            <!-- Forgot password removed -->
+          </div>
+          <button type="submit" class="btn primary-btn btn-full">Initiate Launch</button>
+        </form>
+        <div class="auth-switch">
+          <span>New to the galaxy?</span>
+          <button id="to-register-btn" class="btn text-btn">Create a New Account</button>
+        </div>
+      </div>
+
+      <!-- PANEL 2: REGISTER -->
+      <div id="register-panel" class="auth-panel hidden">
+        <h2>Create Cosmic Account</h2>
+        <form id="register-form">
+          <div class="input-group">
+            <label for="reg-email">Email Address</label>
+            <input type="email" id="reg-email" required class="glass-input" placeholder="traveler@galaxy.com">
+          </div>
+          <div class="input-group">
+            <label for="reg-age">Launch Date (Age Selection)</label>
+            <!-- Calendar pick -->
+            <input type="date" id="reg-age" required class="glass-input date-input">
+          </div>
+          <div class="input-group">
+            <label for="reg-username">Username</label>
+            <input type="text" id="reg-username" required class="glass-input" placeholder="neil_strong">
+          </div>
+          <div class="input-group">
+            <label for="reg-fullname">Full Name</label>
+            <input type="text" id="reg-fullname" required class="glass-input" placeholder="Neil Armstrong">
+          </div>
+          <div class="input-group">
+            <label for="reg-password">Password</label>
+            <input type="password" id="reg-password" required class="glass-input" placeholder="••••••••">
+          </div>
+          <div class="input-group">
+            <label for="reg-repassword">Retype Password</label>
+            <input type="password" id="reg-repassword" required class="glass-input" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn primary-btn btn-full">Create Account 🚀</button>
+        </form>
+        <div class="auth-switch">
+          <span>Already registered?</span>
+          <button id="to-login-btn" class="btn text-btn">Log In</button>
+        </div>
+      </div>
+
+      <!-- Forgot password removed -->
+
+    </div>
+  </div>
+
+
+  <!-- ==================== MAIN PLATFORM FRAME ==================== -->
+  <div id="app-frame" class="app-frame hidden">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar glass">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span class="brand-icon">☄️</span>
+          <span class="brand-text font-space">CometSync</span>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-target="panel-home" id="nav-home">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <span class="nav-text">Home</span>
+        </a>
+        <a href="#" class="nav-item" data-target="panel-search" id="nav-search">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <span class="nav-text">Search</span>
+        </a>
+        <a href="#" class="nav-item" data-target="panel-communicate" id="nav-communicate">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          <span class="nav-text">Communicate</span>
+        </a>
+        <a href="#" class="nav-item" data-target="panel-messages" id="nav-messages">
+          <div class="message-badge-wrapper">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+            <span class="badge hidden" id="message-badge">1</span>
+          </div>
+          <span class="nav-text">Messages</span>
+        </a>
+        <a href="#" class="nav-item" data-target="panel-calendar" id="nav-calendar">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
+          <span class="nav-text">Stellar Calendar</span>
+        </a>
+        <a href="#" class="nav-item" data-target="panel-profile" id="nav-profile">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Avatar" class="avatar-nav" id="sidebar-profile-avatar">
+          <span class="nav-text">Your Profile</span>
+        </a>
+      </nav>
+      
+      <!-- Sidebar Settings/Corner Anchor -->
+      <div class="sidebar-footer">
+        <button id="settings-trigger-btn" class="settings-trigger glass-btn">
+          <svg class="settings-icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3-1.07-3-3s1.07-3 3-3s3 1.07 3 3s-1.07 3-3 3z"/></svg>
+          <span class="nav-text">Galaxy System</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- FLOATING SETTINGS DRAWER -->
+    <div id="settings-drawer" class="settings-drawer glass hidden">
+      <div class="drawer-header">
+        <h3>Cosmic Coordinates</h3>
+        <button id="settings-close-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="drawer-body">
+        <p class="drawer-section-title">Visual Space Theme</p>
+        <div class="theme-option-grid">
+          
+          <button class="theme-card active" data-theme-id="comet">
+            <span class="theme-icon">☄️</span>
+            <div class="theme-info">
+              <span class="theme-name">Comet</span>
+              <span class="theme-desc">Cyan aurora & high-speed dust</span>
+            </div>
+          </button>
+          
+          <button class="theme-card" data-theme-id="asteroids">
+            <span class="theme-icon">🪨</span>
+            <div class="theme-info">
+              <span class="theme-name">Asteroids</span>
+              <span class="theme-desc">Amber rock dust & floating debris</span>
+            </div>
+          </button>
+          
+          <button class="theme-card" data-theme-id="moon">
+            <span class="theme-icon">🌙</span>
+            <div class="theme-info">
+              <span class="theme-name">Moon</span>
+              <span class="theme-desc">Lunar silver glow & tranquil space</span>
+            </div>
+          </button>
+          
+          <button class="theme-card" data-theme-id="sun">
+            <span class="theme-icon">☀️</span>
+            <div class="theme-info">
+              <span class="theme-name">Sun</span>
+              <span class="theme-desc">Vibrant solar flare & gold energies</span>
+            </div>
+          </button>
+          
+          <button class="theme-card" data-theme-id="blackhole">
+            <span class="theme-icon">🕳️</span>
+            <div class="theme-info">
+              <span class="theme-name">Blackhole</span>
+              <span class="theme-desc">Purple gravitational warp bend</span>
+            </div>
+          </button>
+          
+        </div>
+        
+        <div class="drawer-footer">
+          <p class="user-id-indicator" id="current-user-logged-info">Logged in as: —</p>
+          <button id="logout-btn" class="btn danger-btn btn-full">Escape Orbit (Logout)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Dynamic Content Container -->
+    <main class="main-content">
+      
+      <!-- ==================== HOME PANEL ==================== -->
+      <section id="panel-home" class="content-panel active">
+        <!-- Stories Row -->
+        <div class="stories-container glass">
+          <div class="stories-scroll" id="stories-wrapper">
+            <!-- Add story item -->
+            <div class="story-item create-story-item">
+              <div class="story-circle add-story">
+                <span class="plus-icon">+</span>
+              </div>
+              <span class="story-username">Your Orbit</span>
+              <input type="file" id="story-upload-input" accept="image/*" class="hidden">
+            </div>
+            <!-- Interactive User Stories will be loaded dynamically by script.js -->
+          </div>
+        </div>
+
+        <!-- Post Launch Area -->
+        <div class="post-creator-box glass">
+          <div class="creator-header">
+            <img src="" alt="Avatar" class="avatar-md profile-pic-bind">
+            <textarea id="creator-textarea" placeholder="Broadcast a signal to the sector..." rows="2" class="glass-textarea"></textarea>
+          </div>
+          
+          <div id="creator-media-preview" class="media-preview hidden">
+            <img src="" id="media-preview-img" alt="Upload Preview">
+            <button id="remove-media-btn" class="remove-btn">&times;</button>
+          </div>
+
+          <div class="creator-actions">
+            <div class="media-inputs">
+              <label for="post-media-upload" class="media-btn glass-btn">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                <span>Cosmic Photo</span>
+              </label>
+              <input type="file" id="post-media-upload" accept="image/*" class="hidden">
+              
+              <!-- Post customization presets (cosmic gradients!) -->
+              <button id="post-gradient-trigger" class="media-btn glass-btn">
+                <span class="color-dot gradient-dot"></span>
+                <span>Nebula Backdrop</span>
+              </button>
+            </div>
+            
+            <button id="launch-post-btn" class="btn primary-btn">Launch Signal 🚀</button>
+          </div>
+          
+          <!-- Background Gradients Picker Row -->
+          <div id="gradient-picker-row" class="gradient-picker-row hidden">
+            <button class="gradient-preset-btn gp-none active" data-gradient="none">None</button>
+            <button class="gradient-preset-btn gp-comet" data-gradient="comet">Comet Cyan</button>
+            <button class="gradient-preset-btn gp-nebula" data-gradient="nebula">Orion Nebula</button>
+            <button class="gradient-preset-btn gp-solar" data-gradient="solar">Solar Flare</button>
+            <button class="gradient-preset-btn gp-supernova" data-gradient="supernova">Supernova Deep</button>
+            <button class="gradient-preset-btn gp-blackhole" data-gradient="blackhole">Singularity</button>
+          </div>
+        </div>
+
+        <!-- Post Stream Container (Infinite Scroll) -->
+        <div class="posts-stream" id="posts-stream-wrapper">
+          <!-- Posts loaded by script.js -->
+        </div>
+
+        <!-- Loading spinner for infinite scroll -->
+        <div id="infinite-scroll-loader" class="stream-loader hidden">
+          <div class="orbiting-loader">
+            <div class="loader-planet"></div>
+            <div class="loader-satellite"></div>
+          </div>
+          <p>Navigating deeper space fields...</p>
+        </div>
+      </section>
+
+      <!-- ==================== SEARCH PANEL ==================== -->
+      <section id="panel-search" class="content-panel">
+        <div class="search-container glass">
+          <div class="search-bar-wrapper">
+            <input type="text" id="search-input" placeholder="Search cosmic signals, planet boards, or fellow starseeds..." class="glass-input search-input-field">
+            <button id="search-clear-btn" class="clear-btn">&times;</button>
+          </div>
+          
+          <div class="search-filters">
+            <button class="filter-tab active" data-filter="all">All Sectors</button>
+            <button class="filter-tab" data-filter="posts">Signals (Posts)</button>
+            <button class="filter-tab" data-filter="users">Starseeds (Users)</button>
+            <button class="filter-tab" data-filter="communities">Orbit Boards</button>
+          </div>
+        </div>
+
+        <!-- Semantic Search explanation note -->
+        <div class="semantic-search-helper glass">
+          <div class="helper-icon">🧠</div>
+          <div class="helper-text">
+            <h4>Deep Space Cognitive Matching Enabled</h4>
+            <p>Our sensors map search terms semantically. Search "sun" to automatically discover "solar flares", "heliophysics", or "heat". Exact terms are not required.</p>
+          </div>
+        </div>
+
+        <div class="search-results-container" id="search-results-wrapper">
+          <div class="empty-state">
+            <span class="empty-icon">🛰️</span>
+            <h3>Scan the Sectors</h3>
+            <p>Enter queries to find space crews, relevant orbital transmissions, or planetary circles.</p>
+            <div class="popular-tags">
+              <span class="tag">#Nebula</span>
+              <span class="tag">#BlackHole</span>
+              <span class="tag">#JamesWebb</span>
+              <span class="tag">#Astronomy</span>
+              <span class="tag">#MarsColonization</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== COMMUNICATE PANEL ==================== -->
+      <section id="panel-communicate" class="content-panel">
+        <div class="communicate-header glass">
+          <div class="comm-header-text">
+            <h2>Cosmic Communities</h2>
+            <p>Gather inside orbital circles to converse on specialized cosmic subjects. Public and open to all space travelers.</p>
+          </div>
+          <button id="launch-community-trigger" class="btn primary-btn">+ Establish Orbit Community</button>
+        </div>
+
+        <!-- Grid of active Communities -->
+        <div class="communities-grid" id="communities-list-wrapper">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Active Single Community View (Hidden by default, displayed when community is clicked) -->
+        <div id="single-community-view" class="single-community-view glass hidden">
+          <button id="back-to-communities-btn" class="btn text-btn flex-row">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <span>Back to All Sectors</span>
+          </button>
+          
+          <div class="community-banner-card">
+            <div class="comm-banner-overlay"></div>
+            <div class="comm-profile-details">
+              <span class="comm-large-badge" id="comm-view-badge">🚀</span>
+              <div class="comm-profile-texts">
+                <h2 id="comm-view-name">c/NebulaPhotographers</h2>
+                <p id="comm-view-topic" class="comm-topic-badge">Topic: Astrophotography</p>
+                <p id="comm-view-members">1,240 Orbiters in radius</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="comm-description-block">
+            <h3>Community Flight Plan</h3>
+            <p id="comm-view-description">Sharing deep space images from the Hubble, JWST, and backyard rigs.</p>
+          </div>
+
+          <div class="comm-post-composer">
+            <button id="comm-post-trigger" class="btn primary-btn btn-full">Post to this Sector</button>
+          </div>
+
+          <div class="comm-posts-stream" id="comm-posts-wrapper">
+            <!-- Community-specific posts loaded by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== MESSAGES PANEL ==================== -->
+      <section id="panel-messages" class="content-panel">
+        <div class="messages-container glass">
+          <!-- Chats list side pane -->
+          <div class="chats-sidebar">
+            <div class="chats-sidebar-header">
+              <h3>Active Orbits</h3>
+              <p>Communicate with your followers</p>
+            </div>
+            <div class="chats-list" id="chats-list-wrapper">
+              <!-- Loaded by JS -->
+            </div>
+          </div>
+          
+          <!-- Conversation space -->
+          <div class="chat-viewport empty" id="chat-viewport">
+            <!-- Empty state -->
+            <div class="chat-empty-state" id="chat-empty-state">
+              <span class="chat-empty-icon">📡</span>
+              <h3>Open Communications Link</h3>
+              <p>Select a fellow starseed or stellar follower on the left to initiate direct radio sync.</p>
+            </div>
+
+            <!-- Active chat pane (hidden initially) -->
+            <div class="chat-active-box hidden" id="chat-active-box">
+              <div class="chat-header">
+                <div class="chat-header-user">
+                  <div class="chat-avatar-wrapper">
+                    <img src="" id="chat-header-avatar" alt="Avatar" class="avatar-md">
+                    <span class="online-indicator active" id="chat-header-status"></span>
+                  </div>
+                  <div class="chat-header-texts">
+                    <h4 id="chat-header-name">Captain Orion</h4>
+                    <span id="chat-header-handle" class="handle">@orion_crew</span>
+                  </div>
+                </div>
+                <div class="chat-header-actions">
+                  <span class="ping-signal">Ping Latency: 42ms</span>
+                </div>
+              </div>
+
+              <!-- Message bubbles flow -->
+              <div class="chat-messages-flow" id="chat-messages-flow">
+                <!-- Message structures filled by JS -->
+              </div>
+
+              <!-- Typing Indicator -->
+              <div class="chat-typing-indicator hidden" id="chat-typing-indicator">
+                <div class="typing-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <span class="typing-text">Transmitting reply...</span>
+              </div>
+
+              <!-- Message input -->
+              <div class="chat-input-bar">
+                <input type="text" id="chat-message-input" placeholder="Type an interstellar message..." class="glass-input message-text-field">
+                
+                <div class="chat-input-utilities">
+                  <!-- Emoji tray trigger -->
+                  <button id="chat-emoji-btn" class="chat-util-btn glass-btn">☄️</button>
+                  <button id="send-chat-btn" class="btn primary-btn flex-row">
+                    <span>Transmit</span>
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                  </button>
+                </div>
+
+                <!-- Simple Emoji floating panel -->
+                <div id="emoji-popup" class="emoji-popup glass hidden">
+                  <span class="emoji-select">🚀</span>
+                  <span class="emoji-select">☄️</span>
+                  <span class="emoji-select">✨</span>
+                  <span class="emoji-select">🌌</span>
+                  <span class="emoji-select">👽</span>
+                  <span class="emoji-select">🕳️</span>
+                  <span class="emoji-select">☀️</span>
+                  <span class="emoji-select">🌙</span>
+                  <span class="emoji-select">👨‍🚀</span>
+                  <span class="emoji-select">📡</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== CALENDAR PANEL ==================== -->
+      <section id="panel-calendar" class="content-panel">
+        <div class="calendar-container glass">
+          <div class="calendar-header-bar">
+            <button id="calendar-prev-month" class="btn glass-btn">&larr; Prev</button>
+            <h2 id="calendar-month-year-label" class="font-space" style="font-size:1.4rem;">May 2026</h2>
+            <button id="calendar-next-month" class="btn glass-btn">Next &rarr;</button>
+          </div>
+          
+          <div class="calendar-grid-header">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="calendar-days-grid" id="calendar-days-wrapper">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <div class="calendar-event-details glass hidden" id="calendar-event-card" style="margin-top:20px;">
+          <div class="event-details-header">
+            <span class="event-details-badge" id="event-details-date-badge">May 27, 2026</span>
+            <button id="close-event-details-btn" class="close-btn">&times;</button>
+          </div>
+          <div class="event-details-body" style="margin-top:10px;">
+            <h3 id="event-details-title" style="color:var(--accent-neon);">Supermoon Alignment</h3>
+            <p id="event-details-description">Lunar orbit reaches closest perigee. Moon appears 14% larger and 30% brighter!</p>
+            <div class="event-details-scientists" id="event-details-scientists-box" style="margin-top:14px;">
+              <!-- Biography milestones -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== PROFILE PANEL ==================== -->
+      <section id="panel-profile" class="content-panel">
+        
+        <!-- Profile details card -->
+        <div class="profile-card glass">
+          <div class="profile-banner">
+            <!-- Space custom nebula gradient for banner -->
+            <div class="nebula-overlay"></div>
+          </div>
+          
+          <div class="profile-body-row">
+            <div class="profile-avatar-stack">
+              <div class="avatar-interactive-wrapper" id="profile-avatar-trigger">
+                <img src="" id="profile-main-avatar" alt="User Profile Avatar" class="avatar-xl">
+                <div class="avatar-edit-overlay">
+                  <span>Change Avatar</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="profile-main-actions">
+              <button id="profile-edit-btn" class="btn glass-btn">Customize Space Deck</button>
+            </div>
+          </div>
+
+          <div class="profile-meta-info">
+            <div class="profile-identity">
+              <h2 id="profile-fullname-label">—</h2>
+              <span id="profile-username-label" class="profile-handle">@—</span>
+            </div>
+            <div class="profile-badge-row">
+              <span class="badge badge-star-level" id="profile-rank-label">Cosmos Level: Solar Flare</span>
+              <span class="badge badge-age" id="profile-age-label">Age: 25 earth orbits</span>
+            </div>
+            <p class="profile-bio" id="profile-bio-label">—</p>
+          </div>
+
+          <div class="profile-stats-row">
+            <div class="stat-box">
+              <span class="stat-val" id="profile-posts-count">0</span>
+              <span class="stat-lbl">Broadcasts</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val" id="profile-followers-count">0</span>
+              <span class="stat-lbl">Followers</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val" id="profile-following-count">0</span>
+              <span class="stat-lbl">Following</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val" id="profile-affinity-rating">98%</span>
+              <span class="stat-lbl">Cosmic Affinity</span>
+            </div>
+          </div>
+
+          <!-- Edit Profile Form Panel (Collapsible) -->
+          <div id="profile-edit-drawer" class="profile-edit-drawer hidden">
+            <h3>Configure Deck Coordinates</h3>
+            <form id="profile-edit-form">
+              <div class="input-group">
+                <label for="edit-fullname">Full Name</label>
+                <input type="text" id="edit-fullname" class="glass-input">
+              </div>
+              <div class="input-group">
+                <label for="edit-bio">Cosmic Bio (Description)</label>
+                <textarea id="edit-bio" class="glass-input" rows="2"></textarea>
+              </div>
+              <div class="edit-actions-row">
+                <button type="button" id="profile-edit-cancel" class="btn text-btn">Discard</button>
+                <button type="submit" class="btn primary-btn">Apply Coordinates</button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+
+        <div class="profile-tab-section glass">
+          <div class="profile-tabs">
+            <button class="profile-tab active">Transmission Logs (My Posts)</button>
+          </div>
+          <div class="profile-posts-grid" id="profile-posts-wrapper">
+            <!-- User specific posts loaded by JS -->
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+  <!-- JavaScript file -->
+  <script src="script.js"></script>
+</body>
+</html>

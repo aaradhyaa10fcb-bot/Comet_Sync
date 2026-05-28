@@ -1,0 +1,4 @@
+server.js
+SETUP.md
+*.log
+node_modules/
