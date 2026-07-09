@@ -102,6 +102,24 @@ const STELLAR_EVENTS = [
     title: "Summer Solstice Solar Flare",
     description: "A major solar flare peak is forecast. Active geomagnetic alerts are in place, meaning stunning aurora displays at high latitudes!",
     scientists: ["Richard Carrington - Discovered solar flares in 1859", "Kristian Birkeland - Explained the nature of auroras"]
+  },
+  {
+    dateStr: "2026-07-04",
+    title: "Earth at Aphelion",
+    description: "Earth reaches its farthest point from the Sun today — about 152 million km. Counterintuitively, Northern Hemisphere summer is near its peak!",
+    scientists: ["Johannes Kepler - Laws of planetary motion", "Edmond Halley - Orbital mechanics pioneer"]
+  },
+  {
+    dateStr: "2026-07-09",
+    title: "New Moon & Deep Sky Window",
+    description: "Tonight's new moon creates ideal dark-sky conditions for observing galaxies, nebulae, and the Milky Way core.",
+    scientists: ["Galileo Galilei - First telescopic deep-sky observations", "Caroline Herschel - Catalogued star clusters and nebulae"]
+  },
+  {
+    dateStr: "2026-07-28",
+    title: "Delta Aquariids Meteor Shower Peak",
+    description: "Up to 20 meteors per hour from Comet 96P/Machholz debris. Best viewed after midnight from the Southern Hemisphere.",
+    scientists: ["Donald Machholz - Discovered Comet 96P/Machholz", "Fred Whipple - Cometary debris model"]
   }
 ];
 
@@ -352,6 +370,10 @@ function initAppInteractions() {
           transaction.update(targetRef, { followers: targetFollowers });
         });
 
+        // #region agent log
+        fetch('http://127.0.0.1:7660/ingest/7f509506-75fc-4924-98b0-2b5712ae800c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aab436'},body:JSON.stringify({sessionId:'aab436',location:'script.js:profileFollow:success',message:'profile follow transaction succeeded',data:{targetId,myId},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+
         window.viewUserProfile(targetId);
         
         if (currentUserProfile) {
@@ -359,6 +381,9 @@ function initAppInteractions() {
           currentUserProfile = myRef2.data();
         }
       } catch (err) {
+        // #region agent log
+        fetch('http://127.0.0.1:7660/ingest/7f509506-75fc-4924-98b0-2b5712ae800c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aab436'},body:JSON.stringify({sessionId:'aab436',location:'script.js:profileFollow:error',message:'profile follow failed',data:{error:err.message,code:err.code},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         console.error(err);
         showToast("Error", "Could not follow/unfollow user", "error");
       }
@@ -605,35 +630,7 @@ function initAppInteractions() {
     });
   }
 
-<<<<<<< HEAD
   // Home posts stream (Filter out community posts in memory)
-=======
-  // Live feed rendering (minimal)
-  function renderPostCard(doc) {
-    const d = doc.data();
-    const card = document.createElement("article");
-    const gradientClass = d.gradient && d.gradient !== "none" ? ` backdrop-${d.gradient}` : "";
-    card.className = `post-card${gradientClass}${d.gradient && d.gradient !== "none" ? " has-backdrop" : ""}`;
-    const imgHtml = d.image ? `<img class="post-card-image" src="${d.image}" alt="Post image">` : "";
-    card.innerHTML = `
-      <div class="post-card-header">
-        <div class="post-user-info" style="cursor:pointer;" onclick="if(window.viewUserProfile) window.viewUserProfile('${d.userId}')">
-          <img class="avatar-sm" src="${d.userAvatar || ""}" alt="avatar">
-          <div class="post-user-texts">
-            <h4>${d.username || "—"}</h4>
-            <div class="handle">@${d.username || "—"}</div>
-          </div>
-        </div>
-      </div>
-      <div class="post-body">
-        <p>${(d.text || "").replace(/</g, "&lt;")}</p>
-      </div>
-      ${imgHtml}
-    `;
-    return card;
-  }
-
->>>>>>> ee4e73f (changes)
   if (postsWrapper) {
     if (_postsListener) _postsListener();
     _postsListener = db.collection("posts")
@@ -1528,13 +1525,17 @@ async function toggleFollow(targetUserId) {
   const myRef = db.collection("users").doc(user.uid);
   const targetRef = db.collection("users").doc(targetUserId);
 
+  // #region agent log
+  fetch('http://127.0.0.1:7660/ingest/7f509506-75fc-4924-98b0-2b5712ae800c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aab436'},body:JSON.stringify({sessionId:'aab436',location:'script.js:toggleFollow',message:'toggleFollow called',data:{targetUserId,isFollowing,myUid:user.uid},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+
   try {
     if (isFollowing) {
       await myRef.update({
         following: firebase.firestore.FieldValue.arrayRemove(targetUserId)
       });
       await targetRef.update({
-        followers: firebase.firestore.FieldValue.arrayUnion(user.uid) // Keep both in sync
+        followers: firebase.firestore.FieldValue.arrayRemove(user.uid)
       });
       showToast("Link Terminated", "Orbital link with starseed severed.", "success");
     } else {
@@ -1546,7 +1547,16 @@ async function toggleFollow(targetUserId) {
       });
       showToast("Link Connected", "Telemetry sync established.", "success");
     }
+    const mySnap = await myRef.get();
+    currentUserProfile = mySnap.data();
+    const targetSnap = await targetRef.get();
+    // #region agent log
+    fetch('http://127.0.0.1:7660/ingest/7f509506-75fc-4924-98b0-2b5712ae800c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aab436'},body:JSON.stringify({sessionId:'aab436',location:'script.js:toggleFollow:success',message:'toggleFollow succeeded',data:{myFollowing:currentUserProfile?.following?.length,targetFollowers:(targetSnap.data()?.followers||[]).length},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
   } catch (err) {
+    // #region agent log
+    fetch('http://127.0.0.1:7660/ingest/7f509506-75fc-4924-98b0-2b5712ae800c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aab436'},body:JSON.stringify({sessionId:'aab436',location:'script.js:toggleFollow:error',message:'toggleFollow failed',data:{error:err.message,code:err.code},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     console.error("Toggle follow failed:", err);
     showToast("Error", err.message || String(err), "error");
   }
@@ -1722,7 +1732,7 @@ async function performSearch() {
             <img src="${res.data.avatar || ""}" alt="avatar" class="avatar-md" style="width:40px; height:40px;">
             <div class="result-card-details">
               <h4>${res.data.fullname || "Traveler"}</h4>
-              <div class="desc">@${res.data.username || "user"} • Rank: Solar Flare</div>
+              <div class="desc">@${res.data.username || "user"}</div>
             </div>
           </div>
           <div class="result-card-right">
@@ -1804,6 +1814,13 @@ function renderCalendar() {
 
   const year = calendarCursor.getFullYear();
   const month = calendarCursor.getMonth();
+  const monthEvents = STELLAR_EVENTS.filter(e => {
+    const d = new Date(e.dateStr + "T12:00:00");
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  // #region agent log
+  fetch('http://127.0.0.1:7660/ingest/7f509506-75fc-4924-98b0-2b5712ae800c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aab436'},body:JSON.stringify({sessionId:'aab436',location:'script.js:renderCalendar',message:'renderCalendar called',data:{year,month,monthEventsCount:monthEvents.length,totalEvents:STELLAR_EVENTS.length},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const startWeekday = firstDay.getDay(); 
@@ -1837,7 +1854,6 @@ function renderCalendar() {
       cell.classList.add("day-today");
     }
 
-<<<<<<< HEAD
     const dateString = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const hasEvent = STELLAR_EVENTS.find(e => e.dateStr === dateString);
 
@@ -1858,6 +1874,27 @@ function renderCalendar() {
 
     calDays.appendChild(cell);
   }
+
+  if (calPrev && !calPrev.dataset.wired) {
+    calPrev.dataset.wired = "1";
+    calPrev.addEventListener("click", () => {
+      calendarCursor.setMonth(calendarCursor.getMonth() - 1);
+      renderCalendar();
+    });
+  }
+  if (calNext && !calNext.dataset.wired) {
+    calNext.dataset.wired = "1";
+    calNext.addEventListener("click", () => {
+      calendarCursor.setMonth(calendarCursor.getMonth() + 1);
+      renderCalendar();
+    });
+  }
+  if (closeEventDetailsBtn && !closeEventDetailsBtn.dataset.wired) {
+    closeEventDetailsBtn.dataset.wired = "1";
+    closeEventDetailsBtn.addEventListener("click", () => {
+      if (eventCard) setHidden(eventCard, true);
+    });
+  }
 }
 
 function showEventDetails(event) {
@@ -1869,7 +1906,7 @@ function showEventDetails(event) {
 
   if (!card || !dateBadge || !title || !desc || !scientistsBox) return;
 
-  const dateObj = new Date(event.dateStr);
+  const dateObj = new Date(event.dateStr + "T12:00:00");
   const formattedDate = dateObj.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
   
   dateBadge.textContent = formattedDate;
@@ -1900,35 +1937,6 @@ function showEventDetails(event) {
       `;
       scientistsBox.appendChild(item);
     });
-=======
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(year, month, d);
-      const cell = document.createElement("button");
-      cell.type = "button";
-      cell.className = "calendar-day-cell";
-      if (
-        date.getFullYear() === today.getFullYear() &&
-        date.getMonth() === today.getMonth() &&
-        date.getDate() === today.getDate()
-      ) {
-        cell.classList.add("day-today");
-      }
-      cell.textContent = String(d);
-      cell.addEventListener("click", () => {
-        if (eventCard) {
-            setHidden(eventCard, false);
-            const dateStr = date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
-            const dateBadge = document.getElementById("event-details-date-badge");
-            if (dateBadge) dateBadge.textContent = dateStr;
-            const title = document.getElementById("event-details-title");
-            if (title) title.textContent = "Cosmic Event";
-            const desc = document.getElementById("event-details-description");
-            if (desc) desc.textContent = "No specific events logged for this date.";
-        }
-      });
-      calDays.appendChild(cell);
-    }
->>>>>>> ee4e73f (changes)
   }
 
   card.classList.remove("hidden");
