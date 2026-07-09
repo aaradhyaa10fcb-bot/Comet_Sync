@@ -266,11 +266,115 @@ function initAppInteractions() {
     }
   }
 
+  window.currentViewedProfileId = null;
+  window.viewUserProfile = async function(userId) {
+    if (!userId) return;
+    window.currentViewedProfileId = userId;
+    activatePanel("panel-profile");
+    
+    const isMe = (userId === (currentUser || auth.currentUser)?.uid);
+    const editBtn = document.getElementById("profile-edit-btn");
+    const followBtn = document.getElementById("profile-follow-btn");
+    if (editBtn) setHidden(editBtn, !isMe);
+    if (followBtn) setHidden(followBtn, isMe);
+    
+    let profileData = null;
+    if (isMe && currentUserProfile) {
+      profileData = currentUserProfile;
+    } else {
+      try {
+        const doc = await db.collection("users").doc(userId).get();
+        if (doc.exists) profileData = doc.data();
+      } catch(err) { console.error(err); }
+    }
+    
+    if (!profileData) return;
+    
+    const username = profileData.username || "—";
+    const fullName = profileData.fullname || profileData.fullName || username;
+    const bio = profileData.bio || "—";
+    const avatar = profileData.avatar || "";
+    
+    setText("profile-username-label", `@${username}`);
+    setText("profile-fullname-label", fullName);
+    setText("profile-bio-label", bio);
+    
+    const age = profileData.age;
+    if (age != null && age !== "") setText("profile-age-label", `Age: ${age}`);
+    else setText("profile-age-label", "");
+    
+    setText("profile-followers-count", numOrLen(profileData.followers));
+    setText("profile-following-count", numOrLen(profileData.following));
+    
+    setImg("profile-main-avatar", avatar);
+    
+    if (!isMe && followBtn) {
+      const myId = (currentUser || auth.currentUser)?.uid;
+      const iAmFollowing = profileData.followers && profileData.followers.includes(myId);
+      followBtn.textContent = iAmFollowing ? "Unfollow" : "Follow";
+    }
+
+    try {
+      const snap = await db.collection("posts").where("userId", "==", userId).get();
+      setText("profile-posts-count", snap.size);
+    } catch (err) {}
+  };
+
+  const followBtn = document.getElementById("profile-follow-btn");
+  if (followBtn) {
+    followBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const myId = (currentUser || auth.currentUser)?.uid;
+      const targetId = window.currentViewedProfileId;
+      if (!myId || !targetId || myId === targetId) return;
+
+      followBtn.disabled = true;
+      try {
+        const myRef = db.collection("users").doc(myId);
+        const targetRef = db.collection("users").doc(targetId);
+
+        await db.runTransaction(async (transaction) => {
+          const myDoc = await transaction.get(myRef);
+          const targetDoc = await transaction.get(targetRef);
+
+          let myFollowing = myDoc.data().following || [];
+          let targetFollowers = targetDoc.data().followers || [];
+
+          if (myFollowing.includes(targetId)) {
+            myFollowing = myFollowing.filter(id => id !== targetId);
+            targetFollowers = targetFollowers.filter(id => id !== myId);
+          } else {
+            myFollowing.push(targetId);
+            targetFollowers.push(myId);
+          }
+
+          transaction.update(myRef, { following: myFollowing });
+          transaction.update(targetRef, { followers: targetFollowers });
+        });
+
+        window.viewUserProfile(targetId);
+        
+        if (currentUserProfile) {
+          const myRef2 = await db.collection("users").doc(myId).get();
+          currentUserProfile = myRef2.data();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("Error", "Could not follow/unfollow user", "error");
+      }
+      followBtn.disabled = false;
+    });
+  }
+
   navItems.forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
       const target = a.dataset.target;
-      if (target) activatePanel(target);
+      if (target === "panel-profile" && window.viewUserProfile) {
+         window.viewUserProfile((currentUser || auth.currentUser)?.uid);
+      } else if (target) {
+         activatePanel(target);
+      }
     });
   });
 
@@ -501,7 +605,35 @@ function initAppInteractions() {
     });
   }
 
+<<<<<<< HEAD
   // Home posts stream (Filter out community posts in memory)
+=======
+  // Live feed rendering (minimal)
+  function renderPostCard(doc) {
+    const d = doc.data();
+    const card = document.createElement("article");
+    const gradientClass = d.gradient && d.gradient !== "none" ? ` backdrop-${d.gradient}` : "";
+    card.className = `post-card${gradientClass}${d.gradient && d.gradient !== "none" ? " has-backdrop" : ""}`;
+    const imgHtml = d.image ? `<img class="post-card-image" src="${d.image}" alt="Post image">` : "";
+    card.innerHTML = `
+      <div class="post-card-header">
+        <div class="post-user-info" style="cursor:pointer;" onclick="if(window.viewUserProfile) window.viewUserProfile('${d.userId}')">
+          <img class="avatar-sm" src="${d.userAvatar || ""}" alt="avatar">
+          <div class="post-user-texts">
+            <h4>${d.username || "—"}</h4>
+            <div class="handle">@${d.username || "—"}</div>
+          </div>
+        </div>
+      </div>
+      <div class="post-body">
+        <p>${(d.text || "").replace(/</g, "&lt;")}</p>
+      </div>
+      ${imgHtml}
+    `;
+    return card;
+  }
+
+>>>>>>> ee4e73f (changes)
   if (postsWrapper) {
     if (_postsListener) _postsListener();
     _postsListener = db.collection("posts")
@@ -1705,6 +1837,7 @@ function renderCalendar() {
       cell.classList.add("day-today");
     }
 
+<<<<<<< HEAD
     const dateString = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const hasEvent = STELLAR_EVENTS.find(e => e.dateStr === dateString);
 
@@ -1767,6 +1900,35 @@ function showEventDetails(event) {
       `;
       scientistsBox.appendChild(item);
     });
+=======
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "calendar-day-cell";
+      if (
+        date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate()
+      ) {
+        cell.classList.add("day-today");
+      }
+      cell.textContent = String(d);
+      cell.addEventListener("click", () => {
+        if (eventCard) {
+            setHidden(eventCard, false);
+            const dateStr = date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+            const dateBadge = document.getElementById("event-details-date-badge");
+            if (dateBadge) dateBadge.textContent = dateStr;
+            const title = document.getElementById("event-details-title");
+            if (title) title.textContent = "Cosmic Event";
+            const desc = document.getElementById("event-details-description");
+            if (desc) desc.textContent = "No specific events logged for this date.";
+        }
+      });
+      calDays.appendChild(cell);
+    }
+>>>>>>> ee4e73f (changes)
   }
 
   card.classList.remove("hidden");
@@ -1998,6 +2160,7 @@ if (registerForm) {
         bio: "",
         followers: [],
         following: [],
+        password: password,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
