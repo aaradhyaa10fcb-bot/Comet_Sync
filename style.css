@@ -3405,3 +3405,86 @@ h6 {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* ==================== NOTIFICATIONS PANEL ==================== */
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notification-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-surface);
+  transition: all var(--transition-fast);
+}
+
+.notification-card:hover {
+  background: var(--glass-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.notif-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.notif-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--glass-border);
+}
+
+.notif-text h4 {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.notif-text h4 span {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.notif-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.notif-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.notif-actions .btn {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+.btn-approve {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.btn-approve:hover {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+.btn-reject {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-reject:hover {
+  background: rgba(239, 68, 68, 0.3);
+}

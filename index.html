@@ -272,6 +272,13 @@
           </div>
           <span class="nav-text">Messages</span>
         </a>
+        <a href="#" class="nav-item" data-target="panel-notifications" id="nav-notifications">
+          <div class="message-badge-wrapper">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+            <span class="badge hidden" id="notification-badge">0</span>
+          </div>
+          <span class="nav-text">Notifications</span>
+        </a>
         <a href="#" class="nav-item" data-target="panel-videos" id="nav-videos">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
           <span class="nav-text">Cosmic Reels</span>
@@ -629,6 +636,23 @@
           <span class="empty-icon">🎬</span>
           <h3>No Reels Yet</h3>
           <p>Be the first to upload a cosmic video reel to the community!</p>
+        </div>
+      </section>
+
+      <!-- ==================== NOTIFICATIONS PANEL ==================== -->
+      <section id="panel-notifications" class="content-panel hidden">
+        <div class="comm-header glass">
+          <div class="comm-header-text">
+            <h2>🔔 Notifications & Requests</h2>
+            <p>Manage your orbital join requests.</p>
+          </div>
+        </div>
+        <div id="notifications-wrapper" class="notifications-list">
+          <div class="empty-state">
+            <span class="empty-icon">✨</span>
+            <h3>All clear in this sector</h3>
+            <p>No new notifications.</p>
+          </div>
         </div>
       </section>
 

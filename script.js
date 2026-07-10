@@ -47,6 +47,7 @@ let _storiesListener = null;
 let _communitiesListener = null;
 let _messagingUsersListener = null;
 let _videosListener = null;
+let _joinRequestsListener = null;
 let activeChatListener = null;
 let activeChatId = null;
 let commentsListeners = {};
@@ -941,6 +942,9 @@ function initAppInteractions() {
   // Cosmic Reels (Video Panel)
   initVideosPanel();
 
+  // Notifications logic
+  initNotifications();
+
   // Direct Messaging: sidebar and inputs
   initMessaging();
 
@@ -1408,6 +1412,137 @@ function initVideosPanel() {
 }
 
 // ============================================================
+// NOTIFICATIONS & JOIN REQUESTS
+// ============================================================
+
+async function requestToJoinCommunity(commId, commData) {
+  const user = currentUser || auth.currentUser;
+  if (!user) return;
+  const username = currentUserProfile?.username || (user.email ? user.email.split("@")[0] : "user");
+  const avatar = currentUserProfile?.avatar || "";
+
+  try {
+    // Check if request already exists
+    const existing = await db.collection("joinRequests")
+      .where("communityId", "==", commId)
+      .where("requesterId", "==", user.uid)
+      .where("status", "==", "pending")
+      .get();
+    
+    if (!existing.empty) {
+      showToast("Request Pending", "You have already requested to join this community.", "info");
+      return;
+    }
+
+    await db.collection("joinRequests").add({
+      communityId: commId,
+      communityName: commData.name,
+      hostId: commData.creatorId,
+      requesterId: user.uid,
+      requesterName: username,
+      requesterAvatar: avatar,
+      status: "pending",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast("Request Sent", `Your request to join ${commData.name} has been sent to the host.`, "success");
+  } catch (err) {
+    console.error("Join request failed:", err);
+    showToast("Request Failed", err.message || String(err), "error");
+  }
+}
+
+function initNotifications() {
+  const wrapper = document.getElementById("notifications-wrapper");
+  const badge = document.getElementById("notification-badge");
+  if (!wrapper || !badge) return;
+
+  const myUid = (currentUser || auth.currentUser)?.uid;
+  if (!myUid) return;
+
+  if (_joinRequestsListener) _joinRequestsListener();
+
+  _joinRequestsListener = db.collection("joinRequests")
+    .where("hostId", "==", myUid)
+    .where("status", "==", "pending")
+    .orderBy("createdAt", "desc")
+    .onSnapshot((snap) => {
+      wrapper.innerHTML = "";
+      
+      if (snap.empty) {
+        badge.classList.add("hidden");
+        wrapper.innerHTML = `
+          <div class="empty-state">
+            <span class="empty-icon">✨</span>
+            <h3>All clear in this sector</h3>
+            <p>No new notifications.</p>
+          </div>
+        `;
+        return;
+      }
+
+      badge.textContent = snap.size;
+      badge.classList.remove("hidden");
+
+      snap.forEach((doc) => {
+        const req = doc.data();
+        const card = document.createElement("div");
+        card.className = "notification-card";
+        card.innerHTML = `
+          <div class="notif-info">
+            <img src="${req.requesterAvatar || 'https://via.placeholder.com/48'}" alt="avatar" class="notif-avatar">
+            <div class="notif-text">
+              <h4><span>@${req.requesterName}</span> requested to join <span>${req.communityName}</span></h4>
+            </div>
+          </div>
+          <div class="notif-actions">
+            <button class="btn btn-approve" data-id="${doc.id}" data-comm="${req.communityId}" data-req="${req.requesterId}">Approve</button>
+            <button class="btn btn-reject" data-id="${doc.id}">Reject</button>
+          </div>
+        `;
+
+        // Approve
+        const btnApprove = card.querySelector(".btn-approve");
+        if (btnApprove) {
+          btnApprove.addEventListener("click", async () => {
+            try {
+              // 1. Add to community allowlist
+              await db.collection("communities").doc(req.communityId).update({
+                allowedUsers: firebase.firestore.FieldValue.arrayUnion(req.requesterId)
+              });
+              // 2. Mark request as approved
+              await db.collection("joinRequests").doc(doc.id).update({ status: "approved" });
+              showToast("Approved", `@${req.requesterName} has been added to ${req.communityName}.`, "success");
+            } catch (err) {
+              console.error(err);
+              showToast("Error", err.message, "error");
+            }
+          });
+        }
+
+        // Reject
+        const btnReject = card.querySelector(".btn-reject");
+        if (btnReject) {
+          btnReject.addEventListener("click", async () => {
+            try {
+              await db.collection("joinRequests").doc(doc.id).update({ status: "rejected" });
+              showToast("Rejected", `Request denied.`, "info");
+            } catch (err) {
+              console.error(err);
+              showToast("Error", err.message, "error");
+            }
+          });
+        }
+
+        wrapper.appendChild(card);
+      });
+    }, (err) => {
+      console.error("Notifications listener failed:", err);
+      // Depending on if index exists, this might need one. But single field equality + orderBy often requires an index.
+      // The Firebase error will supply a link to create it if needed.
+    });
+}
+
+// ============================================================
 // COMMUNITIES (Orbit Board Details and Stream)
 // ============================================================
 
@@ -1450,6 +1585,19 @@ function loadCommunitiesList() {
           card.addEventListener("click", () => {
             openCommunityView(doc.id, c);
           });
+          
+          const joinBtn = card.querySelector(".comm-join-btn");
+          if (joinBtn) {
+            joinBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const myUid = (currentUser || auth.currentUser)?.uid;
+              if (c.isPrivate && c.creatorId !== myUid && !(c.allowedUsers && c.allowedUsers.includes(myUid))) {
+                requestToJoinCommunity(doc.id, c);
+              } else {
+                openCommunityView(doc.id, c);
+              }
+            });
+          }
           wrapper.appendChild(card);
         });
       },
@@ -2429,6 +2577,7 @@ function cleanupListeners() {
   if (_communitiesListener) { _communitiesListener(); _communitiesListener = null; }
   if (_messagingUsersListener) { _messagingUsersListener(); _messagingUsersListener = null; }
   if (_videosListener) { _videosListener(); _videosListener = null; }
+  if (_joinRequestsListener) { _joinRequestsListener(); _joinRequestsListener = null; }
   if (activeChatListener) { activeChatListener(); activeChatListener = null; }
   
   Object.keys(commentsListeners).forEach((k) => {
