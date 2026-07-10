@@ -32,6 +32,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 let currentUser = null;
 let currentUserProfile = null;
 let selectedPostFile = null;
@@ -1311,13 +1312,11 @@ function initVideosPanel() {
       if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Uploading..."; }
 
       try {
-        // Convert video to data URL (for small videos; large videos would need Cloud Storage)
-        const reader = new FileReader();
-        const videoDataUrl = await new Promise((resolve, reject) => {
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(selectedVideoFile);
-        });
+        // Upload video file to Firebase Storage
+        const fileExt = selectedVideoFile.name.split('.').pop();
+        const storageRef = storage.ref(`videos/${user.uid}_${Date.now()}.${fileExt}`);
+        const uploadTask = await storageRef.put(selectedVideoFile);
+        const videoDataUrl = await uploadTask.ref.getDownloadURL();
 
         const username = currentUserProfile?.username || (user.email ? user.email.split("@")[0] : "user");
         const userAvatar = currentUserProfile?.avatar || "";
