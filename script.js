@@ -37,6 +37,7 @@ let currentUserProfile = null;
 let selectedPostFile = null;
 let selectedPostGradient = "none";
 let selectedStoryFile = null;
+let selectedVideoFile = null;
 
 // Real-time listener unsubscribers
 let _userProfileListener = null;
@@ -44,6 +45,7 @@ let _postsListener = null;
 let _storiesListener = null;
 let _communitiesListener = null;
 let _messagingUsersListener = null;
+let _videosListener = null;
 let activeChatListener = null;
 let activeChatId = null;
 let commentsListeners = {};
@@ -290,7 +292,8 @@ function initAppInteractions() {
     window.currentViewedProfileId = userId;
     activatePanel("panel-profile");
     
-    const isMe = (userId === (currentUser || auth.currentUser)?.uid);
+    const myUid = (currentUser || auth.currentUser)?.uid;
+    const isMe = (userId === myUid);
     const editBtn = document.getElementById("profile-edit-btn");
     const followBtn = document.getElementById("profile-follow-btn");
     if (editBtn) setHidden(editBtn, !isMe);
@@ -327,9 +330,29 @@ function initAppInteractions() {
     setImg("profile-main-avatar", avatar);
     
     if (!isMe && followBtn) {
-      const myId = (currentUser || auth.currentUser)?.uid;
-      const iAmFollowing = profileData.followers && profileData.followers.includes(myId);
+      const iAmFollowing = profileData.followers && profileData.followers.includes(myUid);
       followBtn.textContent = iAmFollowing ? "Unfollow" : "Follow";
+    }
+
+    // Private profile guard — show lock screen for non-followers
+    const postsWrapper = document.getElementById("profile-posts-wrapper");
+    const profileTabSection = document.querySelector(".profile-tab-section");
+    const isPrivate = profileData.isPrivate === true;
+    const iAmFollowing = profileData.followers && profileData.followers.includes(myUid);
+    if (!isMe && isPrivate && !iAmFollowing) {
+      // Show locked placeholder
+      if (postsWrapper) {
+        postsWrapper.innerHTML = `
+          <div class="private-profile-lock" style="grid-column:1/-1;">
+            <div class="lock-icon">🔒</div>
+            <h3>Private Profile</h3>
+            <p>Follow this user to see their transmissions.</p>
+          </div>
+        `;
+      }
+      // Also show post count as hidden
+      setText("profile-posts-count", "—");
+      return;
     }
 
     try {
@@ -445,15 +468,37 @@ function initAppInteractions() {
     });
   });
 
-  // Profile Edit drawer setup
+  // Profile Edit drawer setup — with visibility toggle
   const editBtn = document.getElementById("profile-edit-btn");
   const editDrawer = document.getElementById("profile-edit-drawer");
   const editCancel = document.getElementById("profile-edit-cancel");
   const editForm = document.getElementById("profile-edit-form");
+  const visibilityPublicBtn = document.getElementById("profile-visibility-public");
+  const visibilityPrivateBtn = document.getElementById("profile-visibility-private");
+  const visibilityHint = document.getElementById("profile-visibility-hint");
+  const editIsPrivateInput = document.getElementById("edit-profile-is-private");
+
+  function setVisibilityUI(isPrivate) {
+    if (!visibilityPublicBtn || !visibilityPrivateBtn) return;
+    visibilityPublicBtn.classList.toggle("active", !isPrivate);
+    visibilityPrivateBtn.classList.toggle("active", isPrivate);
+    if (editIsPrivateInput) editIsPrivateInput.value = String(isPrivate);
+    if (visibilityHint) {
+      visibilityHint.textContent = isPrivate
+        ? "Only your followers can see your posts."
+        : "Your profile is visible to everyone.";
+    }
+  }
+
+  if (visibilityPublicBtn) visibilityPublicBtn.addEventListener("click", () => setVisibilityUI(false));
+  if (visibilityPrivateBtn) visibilityPrivateBtn.addEventListener("click", () => setVisibilityUI(true));
 
   if (editBtn && editDrawer) {
     editBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      // Sync current privacy setting to UI
+      const isPrivate = currentUserProfile?.isPrivate === true;
+      setVisibilityUI(isPrivate);
       editDrawer.classList.toggle("hidden");
     });
   }
@@ -470,8 +515,9 @@ function initAppInteractions() {
       if (!user) return;
       const fullname = document.getElementById("edit-fullname")?.value?.trim() || "";
       const bio = document.getElementById("edit-bio")?.value?.trim() || "";
+      const isPrivate = editIsPrivateInput?.value === "true";
       try {
-        await db.collection("users").doc(user.uid).update({ fullname, bio });
+        await db.collection("users").doc(user.uid).update({ fullname, bio, isPrivate });
         editDrawer.classList.add("hidden");
         showToast("Profile Updated", "Deck coordinates synced successfully.", "success");
       } catch (err) {
@@ -483,6 +529,48 @@ function initAppInteractions() {
 
   // Preset Avatar selector
   initAvatarModal();
+
+  // Google Sign-In
+  const googleLoginBtn = document.getElementById("google-signin-login-btn");
+  const googleRegisterBtn = document.getElementById("google-signin-register-btn");
+  async function handleGoogleSignIn() {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      const result = await auth.signInWithPopup(provider);
+      const user = result.user;
+      // Check if user doc already exists
+      const userDocRef = db.collection("users").doc(user.uid);
+      const userDoc = await userDocRef.get();
+      if (!userDoc.exists) {
+        // New Google user — create profile doc
+        const displayName = user.displayName || "Cosmic Traveler";
+        const username = (user.email || "").split("@")[0].replace(/[^a-zA-Z0-9_]/g, "_") || "user_" + Date.now();
+        await userDocRef.set({
+          username,
+          fullname: displayName,
+          email: user.email || "",
+          age: null,
+          avatar: user.photoURL || "",
+          bio: "",
+          followers: [],
+          following: [],
+          isPrivate: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast("Welcome!", `Account created for ${displayName}`, "success");
+      } else {
+        showToast("Welcome back!", `Signed in as ${user.displayName || user.email}`, "success");
+      }
+      showApp();
+    } catch (err) {
+      console.error("Google sign-in failed:", err);
+      if (err.code !== "auth/popup-closed-by-user") {
+        showToast("Google Sign-In Failed", err.message || String(err), "error");
+      }
+    }
+  }
+  if (googleLoginBtn) googleLoginBtn.addEventListener("click", (e) => { e.preventDefault(); handleGoogleSignIn(); });
+  if (googleRegisterBtn) googleRegisterBtn.addEventListener("click", (e) => { e.preventDefault(); handleGoogleSignIn(); });
 
   // Post media selection + preview
   const postMediaInput = document.getElementById("post-media-upload");
@@ -722,6 +810,19 @@ function initAppInteractions() {
   }
 
   if (createCommunityForm && communityModal) {
+    // Update privacy hint dynamically
+    const commPublicRadio = document.getElementById("comm-public");
+    const commPrivateRadio = document.getElementById("comm-private");
+    const privacyHint = document.getElementById("privacy-hint-text");
+    if (commPublicRadio && commPrivateRadio && privacyHint) {
+      commPublicRadio.addEventListener("change", () => {
+        privacyHint.textContent = "Anyone can discover and join this community.";
+      });
+      commPrivateRadio.addEventListener("change", () => {
+        privacyHint.textContent = "Only invited members can see and join this community.";
+      });
+    }
+
     createCommunityForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const user = currentUser || auth.currentUser;
@@ -730,6 +831,7 @@ function initAppInteractions() {
       let name = document.getElementById("comm-name")?.value?.trim() || "";
       const topic = document.getElementById("comm-topic")?.value?.trim() || "";
       const description = document.getElementById("comm-description")?.value?.trim() || "";
+      const isPrivate = document.getElementById("comm-private")?.checked || false;
 
       if (!name || !topic || !description) return;
 
@@ -742,6 +844,7 @@ function initAppInteractions() {
           name,
           topic,
           description,
+          isPrivate,
           creatorId: user.uid,
           membersCount: 1,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -767,6 +870,9 @@ function initAppInteractions() {
   }
 
   loadCommunitiesList();
+
+  // Cosmic Reels (Video Panel)
+  initVideosPanel();
 
   // Direct Messaging: sidebar and inputs
   initMessaging();
@@ -1078,6 +1184,165 @@ function initAvatarModal() {
 }
 
 // ============================================================
+// VIDEOS / COSMIC REELS PANEL
+// ============================================================
+
+function initVideosPanel() {
+  const uploadTrigger = document.getElementById("upload-reel-trigger");
+  const videoModal = document.getElementById("video-modal");
+  const videoModalCloseBtn = document.getElementById("video-modal-close-btn");
+  const videoFileInput = document.getElementById("video-file-input");
+  const videoSelectedName = document.getElementById("video-file-selected-name");
+  const videoUploadForm = document.getElementById("video-upload-form");
+  const videosGrid = document.getElementById("videos-grid-wrapper");
+  const videosEmpty = document.getElementById("videos-empty-state");
+
+  // Open/close modal
+  if (uploadTrigger && videoModal) {
+    uploadTrigger.addEventListener("click", (e) => {
+      e.preventDefault();
+      videoModal.classList.remove("hidden");
+    });
+  }
+  if (videoModalCloseBtn && videoModal) {
+    videoModalCloseBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      videoModal.classList.add("hidden");
+      selectedVideoFile = null;
+      if (videoFileInput) videoFileInput.value = "";
+      if (videoSelectedName) { videoSelectedName.textContent = ""; videoSelectedName.classList.add("hidden"); }
+    });
+  }
+
+  // File selection
+  if (videoFileInput && videoSelectedName) {
+    videoFileInput.addEventListener("change", () => {
+      const file = videoFileInput.files?.[0] || null;
+      selectedVideoFile = file;
+      if (file) {
+        videoSelectedName.textContent = `✅ ${file.name}`;
+        videoSelectedName.classList.remove("hidden");
+      } else {
+        videoSelectedName.textContent = "";
+        videoSelectedName.classList.add("hidden");
+      }
+    });
+  }
+
+  // Upload submit
+  if (videoUploadForm) {
+    videoUploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = currentUser || auth.currentUser;
+      if (!user) { showToast("Not signed in", "Please log in.", "error"); return; }
+      if (!selectedVideoFile) { showToast("No file", "Please select a video file.", "error"); return; }
+
+      const title = document.getElementById("video-title")?.value?.trim() || "";
+      const description = document.getElementById("video-description")?.value?.trim() || "";
+      if (!title) { showToast("Missing title", "Please add a title for your reel.", "error"); return; }
+
+      const submitBtn = document.getElementById("video-upload-submit-btn");
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Uploading..."; }
+
+      try {
+        // Convert video to data URL (for small videos; large videos would need Cloud Storage)
+        const reader = new FileReader();
+        const videoDataUrl = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(selectedVideoFile);
+        });
+
+        const username = currentUserProfile?.username || (user.email ? user.email.split("@")[0] : "user");
+        const userAvatar = currentUserProfile?.avatar || "";
+
+        await db.collection("videos").add({
+          title,
+          description,
+          videoUrl: videoDataUrl,
+          userId: user.uid,
+          username,
+          userAvatar,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        videoUploadForm.reset();
+        selectedVideoFile = null;
+        if (videoSelectedName) { videoSelectedName.textContent = ""; videoSelectedName.classList.add("hidden"); }
+        videoModal.classList.add("hidden");
+        showToast("Reel Launched!", "Your cosmic reel is now live.", "success");
+      } catch (err) {
+        console.error("Video upload failed:", err);
+        showToast("Upload Failed", err.message || String(err), "error");
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Launch Reel 🚀"; }
+      }
+    });
+  }
+
+  // Load videos from Firestore
+  if (videosGrid) {
+    if (_videosListener) _videosListener();
+    _videosListener = db.collection("videos")
+      .orderBy("createdAt", "desc")
+      .onSnapshot((snap) => {
+        videosGrid.innerHTML = "";
+        if (snap.empty) {
+          if (videosEmpty) videosEmpty.classList.remove("hidden");
+          return;
+        }
+        if (videosEmpty) videosEmpty.classList.add("hidden");
+        snap.forEach((doc) => {
+          const v = doc.data();
+          const card = document.createElement("div");
+          card.className = "video-card glass";
+          card.innerHTML = `
+            <div class="video-card-player">
+              <video src="${v.videoUrl || ""}" class="video-player" preload="metadata" playsinline></video>
+              <div class="video-play-overlay" title="Play">
+                <div class="video-play-icon">▶</div>
+              </div>
+            </div>
+            <div class="video-card-info">
+              <div class="video-card-user">
+                <img src="${v.userAvatar || ""}" alt="avatar" class="avatar-sm">
+                <span class="video-card-username">@${v.username || "user"}</span>
+              </div>
+              <h4 class="video-card-title">${(v.title || "").replace(/</g, "&lt;")}</h4>
+              <p class="video-card-desc">${(v.description || "").replace(/</g, "&lt;")}</p>
+            </div>
+          `;
+
+          // Play/pause on overlay click
+          const videoEl = card.querySelector("video");
+          const overlay = card.querySelector(".video-play-overlay");
+          const playIcon = card.querySelector(".video-play-icon");
+          if (overlay && videoEl) {
+            overlay.addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (videoEl.paused) {
+                videoEl.play();
+                overlay.classList.add("playing");
+                playIcon.textContent = "⏸";
+              } else {
+                videoEl.pause();
+                overlay.classList.remove("playing");
+                playIcon.textContent = "▶";
+              }
+            });
+            videoEl.addEventListener("ended", () => {
+              overlay.classList.remove("playing");
+              playIcon.textContent = "▶";
+            });
+          }
+
+          videosGrid.appendChild(card);
+        });
+      }, (err) => console.error("Videos listener failed:", err));
+  }
+}
+
+// ============================================================
 // COMMUNITIES (Orbit Board Details and Stream)
 // ============================================================
 
@@ -1100,9 +1365,12 @@ function loadCommunitiesList() {
           const c = doc.data();
           const card = document.createElement("div");
           card.className = "community-card glass";
+          const privacyBadge = c.isPrivate ? `<span class="comm-private-badge">🔒 Private</span>` : `<span class="comm-public-badge">🌐 Public</span>`;
+          const joinBtnLabel = c.isPrivate ? "Request to Join" : "Orbit";
           card.innerHTML = `
             <div class="comm-card-banner">
               <div class="comm-card-icon">🚀</div>
+              ${privacyBadge}
             </div>
             <div class="comm-card-body">
               <h3>${c.name || "c/board"}</h3>
@@ -1111,7 +1379,7 @@ function loadCommunitiesList() {
             </div>
             <div class="comm-card-footer">
               <span class="comm-members-count">${c.membersCount || 1} Orbiters</span>
-              <button class="btn primary-btn comm-join-btn">Orbit</button>
+              <button class="btn primary-btn comm-join-btn">${joinBtnLabel}</button>
             </div>
           `;
           card.addEventListener("click", () => {
@@ -2086,6 +2354,7 @@ function cleanupListeners() {
   if (_storiesListener) { _storiesListener(); _storiesListener = null; }
   if (_communitiesListener) { _communitiesListener(); _communitiesListener = null; }
   if (_messagingUsersListener) { _messagingUsersListener(); _messagingUsersListener = null; }
+  if (_videosListener) { _videosListener(); _videosListener = null; }
   if (activeChatListener) { activeChatListener(); activeChatListener = null; }
   
   Object.keys(commentsListeners).forEach((k) => {

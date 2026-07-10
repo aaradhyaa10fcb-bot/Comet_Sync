@@ -1321,7 +1321,7 @@ h6 {
   overflow: hidden;
 }
 
-/* Styled Nebula Backdrop Preset styles in actual Feed cards */
+/* Styled  Backdrop Preset styles in actual Feed cards */
 .post-card.backdrop-comet {
   background: linear-gradient(135deg, #020813 0%, #05223c 100%);
   border-color: rgba(0, 242, 254, 0.25);
@@ -2952,4 +2952,377 @@ h6 {
 .scientist-meta {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+/* ==================== GOOGLE SIGN-IN BUTTON ==================== */
+.auth-or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 16px;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+}
+
+.divider-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.google-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  font-family: var(--font-space);
+  font-weight: 500;
+  font-size: 0.9rem;
+  gap: 10px;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+.google-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.google-btn:active {
+  transform: translateY(0);
+}
+
+/* ==================== PRIVACY PILL TOGGLES (Communities) ==================== */
+.privacy-pill-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.privacy-option {
+  cursor: pointer;
+  display: flex;
+}
+
+.privacy-option input[type="radio"] {
+  display: none;
+}
+
+.privacy-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-family: var(--font-space);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.privacy-option input[type="radio"]:checked + .privacy-pill {
+  background: linear-gradient(135deg, var(--accent-neon) 0%, var(--accent-secondary) 100%);
+  color: #020813;
+  border-color: var(--accent-neon);
+  box-shadow: 0 0 14px var(--accent-neon-glow);
+}
+
+.privacy-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* ==================== COMMUNITY PRIVACY BADGES ==================== */
+.comm-card-banner {
+  position: relative;
+}
+
+.comm-private-badge,
+.comm-public-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--font-space);
+}
+
+.comm-private-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.comm-public-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* ==================== PROFILE VISIBILITY TOGGLE ==================== */
+.profile-visibility-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.visibility-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-family: var(--font-space);
+  font-weight: 500;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.visibility-btn:hover {
+  background: var(--glass-hover);
+  border-color: var(--accent-neon);
+  color: var(--text-primary);
+}
+
+.visibility-btn.active {
+  background: linear-gradient(135deg, var(--accent-neon) 0%, var(--accent-secondary) 100%);
+  color: #020813;
+  border-color: var(--accent-neon);
+  box-shadow: 0 0 14px var(--accent-neon-glow);
+}
+
+/* ==================== PRIVATE PROFILE LOCK SCREEN ==================== */
+.private-profile-lock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 30px;
+  text-align: center;
+  gap: 16px;
+  animation: panel-fade-in var(--transition-normal) ease forwards;
+}
+
+.private-profile-lock .lock-icon {
+  font-size: 3.5rem;
+  filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.5));
+  animation: orbit-float 4s ease-in-out infinite;
+}
+
+.private-profile-lock h3 {
+  font-size: 1.4rem;
+  color: var(--text-primary);
+}
+
+.private-profile-lock p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 300px;
+}
+
+/* ==================== COSMIC REELS — VIDEO SECTION ==================== */
+.videos-header {
+  padding: 24px 28px;
+  border-radius: 16px;
+  margin-bottom: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.videos-header h2 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.videos-header p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.videos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* Video Card */
+.video-card {
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  cursor: pointer;
+}
+
+.video-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 20px var(--accent-neon-glow);
+  border-color: var(--accent-neon);
+}
+
+.video-card-player {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+  overflow: hidden;
+}
+
+.video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  transition: background var(--transition-fast);
+  cursor: pointer;
+}
+
+.video-play-overlay:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.video-play-overlay.playing {
+  background: transparent;
+}
+
+.video-play-overlay.playing:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.video-play-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-neon) 0%, var(--accent-secondary) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #020813;
+  box-shadow: 0 0 24px var(--accent-neon-glow);
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+  padding-left: 4px; /* optically center play arrow */
+}
+
+.video-play-overlay.playing .video-play-icon {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.video-play-overlay.playing:hover .video-play-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.video-card-info {
+  padding: 16px 20px 18px;
+}
+
+.video-card-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.video-card-username {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.video-card-title {
+  font-size: 1rem;
+  font-family: var(--font-space);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.35;
+}
+
+.video-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ==================== VIDEO UPLOAD MODAL ==================== */
+.video-upload-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+  border: 2px dashed var(--glass-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.video-upload-drop-zone:hover {
+  border-color: var(--accent-neon);
+  background: var(--glass-hover);
+  box-shadow: 0 0 16px var(--accent-neon-glow);
+}
+
+.video-drop-icon {
+  font-size: 2.5rem;
+}
+
+.video-upload-drop-zone p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.video-drop-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.video-selected-name {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #6ee7b7;
+  font-family: var(--font-space);
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }

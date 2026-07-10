@@ -51,6 +51,13 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.creatorId;
     }
 
+    // Videos (Cosmic Reels): authenticated users can read/create, only author can delete
+    match /videos/{videoId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
     // Chats and messages: any authenticated user can read/write
     match /chats/{chatId} {
       allow read, write: if request.auth != null;

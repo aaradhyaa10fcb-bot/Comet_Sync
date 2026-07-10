@@ -86,14 +86,53 @@
           <label for="comm-description">Description</label>
           <textarea id="comm-description" placeholder="Describe the mission of this orbital community..." required class="glass-input" rows="3"></textarea>
         </div>
-        <div class="input-group checkbox-group">
-          <label class="checkbox-container">
-            <input type="checkbox" checked disabled>
-            <span class="checkmark"></span>
-            Public Access (Anyone can join)
-          </label>
+        <!-- Privacy Toggle -->
+        <div class="input-group">
+          <label>Community Privacy</label>
+          <div class="privacy-pill-toggle">
+            <label class="privacy-option">
+              <input type="radio" name="comm-privacy" value="public" checked id="comm-public">
+              <span class="privacy-pill">🌐 Public</span>
+            </label>
+            <label class="privacy-option">
+              <input type="radio" name="comm-privacy" value="private" id="comm-private">
+              <span class="privacy-pill">🔒 Private</span>
+            </label>
+          </div>
+          <p class="privacy-hint" id="privacy-hint-text">Anyone can discover and join this community.</p>
         </div>
         <button type="submit" class="btn primary-btn btn-full">Establish Orbit</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Video Upload Modal -->
+  <div id="video-modal" class="modal hidden">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h2>📹 Upload Cosmic Reel</h2>
+        <button id="video-modal-close-btn" class="close-btn">&times;</button>
+      </div>
+      <form id="video-upload-form">
+        <div class="input-group">
+          <label for="video-title">Reel Title</label>
+          <input type="text" id="video-title" placeholder="My Deep Space Discovery..." required class="glass-input">
+        </div>
+        <div class="input-group">
+          <label for="video-description">Description (optional)</label>
+          <input type="text" id="video-description" placeholder="What's this reel about?" class="glass-input">
+        </div>
+        <div class="input-group">
+          <label>Select Video File</label>
+          <label for="video-file-input" class="video-upload-drop-zone" id="video-drop-label">
+            <div class="video-drop-icon">🎬</div>
+            <p>Click to select a video file</p>
+            <span class="video-drop-hint">MP4, WebM, MOV supported</span>
+          </label>
+          <input type="file" id="video-file-input" accept="video/*" class="hidden">
+          <div id="video-file-selected-name" class="video-selected-name hidden"></div>
+        </div>
+        <button type="submit" id="video-upload-submit-btn" class="btn primary-btn btn-full">Launch Reel 🚀</button>
       </form>
     </div>
   </div>
@@ -124,6 +163,17 @@
           </div>
           <button type="submit" class="btn primary-btn btn-full">Initiate Launch</button>
         </form>
+        <!-- OR Divider -->
+        <div class="auth-or-divider">
+          <span class="divider-line"></span>
+          <span class="divider-text">or</span>
+          <span class="divider-line"></span>
+        </div>
+        <!-- Google Sign-In -->
+        <button id="google-signin-login-btn" class="btn google-btn btn-full">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+          Continue with Google
+        </button>
         <div class="auth-switch">
           <span>New to the galaxy?</span>
           <button id="to-register-btn" class="btn text-btn">Create a New Account</button>
@@ -161,13 +211,22 @@
           </div>
           <button type="submit" class="btn primary-btn btn-full">Create Account 🚀</button>
         </form>
+        <!-- OR Divider -->
+        <div class="auth-or-divider">
+          <span class="divider-line"></span>
+          <span class="divider-text">or</span>
+          <span class="divider-line"></span>
+        </div>
+        <!-- Google Sign-In for Register -->
+        <button id="google-signin-register-btn" class="btn google-btn btn-full">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+          Continue with Google
+        </button>
         <div class="auth-switch">
           <span>Already registered?</span>
           <button id="to-login-btn" class="btn text-btn">Log In</button>
         </div>
       </div>
-
-      <!-- Forgot password removed -->
 
     </div>
   </div>
@@ -204,6 +263,10 @@
             <span class="badge hidden" id="message-badge">1</span>
           </div>
           <span class="nav-text">Messages</span>
+        </a>
+        <a href="#" class="nav-item" data-target="panel-videos" id="nav-videos">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+          <span class="nav-text">Cosmic Reels</span>
         </a>
         <a href="#" class="nav-item" data-target="panel-calendar" id="nav-calendar">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
@@ -326,7 +389,7 @@
               <!-- Post customization presets (cosmic gradients!) -->
               <button id="post-gradient-trigger" class="media-btn glass-btn">
                 <span class="color-dot gradient-dot"></span>
-                <span>Nebula Backdrop</span>
+                <span>Select Backdrop</span>
               </button>
             </div>
             
@@ -538,6 +601,29 @@
         </div>
       </section>
 
+      <!-- ==================== COSMIC REELS (VIDEO) PANEL ==================== -->
+      <section id="panel-videos" class="content-panel">
+        <div class="videos-header glass">
+          <div class="comm-header-text">
+            <h2>🎬 Cosmic Reels</h2>
+            <p>Watch and share short space exploration videos from the community.</p>
+          </div>
+          <button id="upload-reel-trigger" class="btn primary-btn">+ Upload Reel</button>
+        </div>
+
+        <!-- Videos Grid -->
+        <div class="videos-grid" id="videos-grid-wrapper">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Loading empty state -->
+        <div id="videos-empty-state" class="empty-state hidden">
+          <span class="empty-icon">🎬</span>
+          <h3>No Reels Yet</h3>
+          <p>Be the first to upload a cosmic video reel to the community!</p>
+        </div>
+      </section>
+
       <!-- ==================== CALENDAR PANEL ==================== -->
       <section id="panel-calendar" class="content-panel">
         <div class="calendar-container glass">
@@ -634,6 +720,20 @@
                 <label for="edit-bio">Cosmic Bio (Description)</label>
                 <textarea id="edit-bio" class="glass-input" rows="2"></textarea>
               </div>
+              <!-- Profile Visibility Toggle -->
+              <div class="input-group">
+                <label>Profile Visibility</label>
+                <div class="profile-visibility-toggle">
+                  <button type="button" id="profile-visibility-public" class="visibility-btn active">
+                    🌐 Public
+                  </button>
+                  <button type="button" id="profile-visibility-private" class="visibility-btn">
+                    🔒 Private
+                  </button>
+                </div>
+                <p class="privacy-hint" id="profile-visibility-hint">Your profile is visible to everyone.</p>
+              </div>
+              <input type="hidden" id="edit-profile-is-private" value="false">
               <div class="edit-actions-row">
                 <button type="button" id="profile-edit-cancel" class="btn text-btn">Discard</button>
                 <button type="submit" class="btn primary-btn">Apply Coordinates</button>
