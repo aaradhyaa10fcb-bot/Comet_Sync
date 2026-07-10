@@ -334,19 +334,21 @@ function initAppInteractions() {
       followBtn.textContent = iAmFollowing ? "Unfollow" : "Follow";
     }
 
-    // Private profile guard — show lock screen for non-followers
+    // Private profile guard — show lock screen for non-followers or unallowed users
     const postsWrapper = document.getElementById("profile-posts-wrapper");
     const profileTabSection = document.querySelector(".profile-tab-section");
     const isPrivate = profileData.isPrivate === true;
     const iAmFollowing = profileData.followers && profileData.followers.includes(myUid);
-    if (!isMe && isPrivate && !iAmFollowing) {
+    const iAmAllowed = profileData.allowedUsers && profileData.allowedUsers.includes(myUid);
+
+    if (!isMe && isPrivate && !iAmFollowing && !iAmAllowed) {
       // Show locked placeholder
       if (postsWrapper) {
         postsWrapper.innerHTML = `
           <div class="private-profile-lock" style="grid-column:1/-1;">
             <div class="lock-icon">🔒</div>
             <h3>Private Profile</h3>
-            <p>Follow this user to see their transmissions.</p>
+            <p>You must follow this user or be on their allowlist to see their transmissions.</p>
           </div>
         `;
       }
@@ -485,8 +487,18 @@ function initAppInteractions() {
     if (editIsPrivateInput) editIsPrivateInput.value = String(isPrivate);
     if (visibilityHint) {
       visibilityHint.textContent = isPrivate
-        ? "Only your followers can see your posts."
+        ? "Only your followers and selected users can see your posts."
         : "Your profile is visible to everyone.";
+    }
+    const allowListSection = document.getElementById("profile-allowed-users-section");
+    if (allowListSection) {
+      if (isPrivate) {
+        allowListSection.classList.remove("hidden");
+        // Re-render list with currently saved allowed users
+        renderAllowedUsersList("profile-allowed-users-list", currentUserProfile?.allowedUsers || []);
+      } else {
+        allowListSection.classList.add("hidden");
+      }
     }
   }
 
@@ -516,8 +528,15 @@ function initAppInteractions() {
       const fullname = document.getElementById("edit-fullname")?.value?.trim() || "";
       const bio = document.getElementById("edit-bio")?.value?.trim() || "";
       const isPrivate = editIsPrivateInput?.value === "true";
+      
+      let allowedUsers = [];
+      if (isPrivate) {
+        const checkboxes = document.querySelectorAll("#profile-allowed-users-list input[type='checkbox']:checked");
+        checkboxes.forEach(cb => allowedUsers.push(cb.value));
+      }
+
       try {
-        await db.collection("users").doc(user.uid).update({ fullname, bio, isPrivate });
+        await db.collection("users").doc(user.uid).update({ fullname, bio, isPrivate, allowedUsers });
         editDrawer.classList.add("hidden");
         showToast("Profile Updated", "Deck coordinates synced successfully.", "success");
       } catch (err) {
@@ -525,6 +544,36 @@ function initAppInteractions() {
         showToast("Update Failed", err.message || String(err), "error");
       }
     });
+  }
+
+  // Helper to render user checklists
+  async function renderAllowedUsersList(containerId, checkedIds = []) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    try {
+      const snap = await db.collection("users").get();
+      const myId = (currentUser || auth.currentUser)?.uid;
+      let html = "";
+      snap.forEach(doc => {
+        if (doc.id === myId) return; // don't list self
+        const u = doc.data();
+        const isChecked = checkedIds.includes(doc.id) ? "checked" : "";
+        html += `
+          <label class="allowed-user-item">
+            <input type="checkbox" value="${doc.id}" ${isChecked}>
+            <img src="${u.avatar || ''}" alt="" class="allowed-user-avatar">
+            <div class="allowed-user-info">
+              <span class="allowed-user-fullname">${u.fullname || u.username}</span>
+              <span class="allowed-user-username">@${u.username}</span>
+            </div>
+          </label>
+        `;
+      });
+      container.innerHTML = html || "<p class='privacy-hint'>No other users found.</p>";
+    } catch (err) {
+      console.error("Failed to load users for allowlist:", err);
+      container.innerHTML = "<p class='privacy-hint'>Error loading users.</p>";
+    }
   }
 
   // Preset Avatar selector
@@ -814,12 +863,21 @@ function initAppInteractions() {
     const commPublicRadio = document.getElementById("comm-public");
     const commPrivateRadio = document.getElementById("comm-private");
     const privacyHint = document.getElementById("privacy-hint-text");
+    const allowListSection = document.getElementById("comm-allowed-users-section");
+    
     if (commPublicRadio && commPrivateRadio && privacyHint) {
       commPublicRadio.addEventListener("change", () => {
         privacyHint.textContent = "Anyone can discover and join this community.";
+        if (allowListSection) allowListSection.classList.add("hidden");
       });
       commPrivateRadio.addEventListener("change", () => {
         privacyHint.textContent = "Only invited members can see and join this community.";
+        if (allowListSection) {
+          allowListSection.classList.remove("hidden");
+          if (typeof renderAllowedUsersList === "function") {
+            renderAllowedUsersList("comm-allowed-users-list", []);
+          }
+        }
       });
     }
 
@@ -833,6 +891,12 @@ function initAppInteractions() {
       const description = document.getElementById("comm-description")?.value?.trim() || "";
       const isPrivate = document.getElementById("comm-private")?.checked || false;
 
+      let allowedUsers = [];
+      if (isPrivate) {
+        const checkboxes = document.querySelectorAll("#comm-allowed-users-list input[type='checkbox']:checked");
+        checkboxes.forEach(cb => allowedUsers.push(cb.value));
+      }
+
       if (!name || !topic || !description) return;
 
       if (!name.startsWith("c/")) {
@@ -845,12 +909,14 @@ function initAppInteractions() {
           topic,
           description,
           isPrivate,
+          allowedUsers,
           creatorId: user.uid,
           membersCount: 1,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
         createCommunityForm.reset();
+        if (allowListSection) allowListSection.classList.add("hidden");
         communityModal.classList.add("hidden");
         showToast("Community Launched", `Community ${name} established.`, "success");
       } catch (err) {
@@ -1396,6 +1462,15 @@ function openCommunityView(commId, commData) {
   const listWrapper = document.getElementById("communities-list-wrapper");
   const singleView = document.getElementById("single-community-view");
   if (!listWrapper || !singleView) return;
+
+  const myUid = (currentUser || auth.currentUser)?.uid;
+  const isCreator = commData.creatorId === myUid;
+  const iAmAllowed = commData.allowedUsers && commData.allowedUsers.includes(myUid);
+  
+  if (commData.isPrivate && !isCreator && !iAmAllowed) {
+    showToast("Access Denied", "This community is private and you are not on the allowlist.", "error");
+    return;
+  }
 
   listWrapper.classList.add("hidden");
   singleView.classList.remove("hidden");

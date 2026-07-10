@@ -101,6 +101,14 @@
           </div>
           <p class="privacy-hint" id="privacy-hint-text">Anyone can discover and join this community.</p>
         </div>
+        <!-- Allowed Users Selection (Hidden by default) -->
+        <div id="comm-allowed-users-section" class="input-group hidden">
+          <label>Select Allowed Orbiters</label>
+          <p class="privacy-hint">Choose who can access this private community.</p>
+          <div class="allowed-users-list glass-input" id="comm-allowed-users-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
         <button type="submit" class="btn primary-btn btn-full">Establish Orbit</button>
       </form>
     </div>
@@ -734,6 +742,14 @@
                 <p class="privacy-hint" id="profile-visibility-hint">Your profile is visible to everyone.</p>
               </div>
               <input type="hidden" id="edit-profile-is-private" value="false">
+              <!-- Allowed Users Selection (Hidden by default) -->
+              <div id="profile-allowed-users-section" class="input-group hidden">
+                <label>Select Allowed Viewers</label>
+                <p class="privacy-hint">Choose who can view your private transmissions.</p>
+                <div class="allowed-users-list glass-input" id="profile-allowed-users-list">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
               <div class="edit-actions-row">
                 <button type="button" id="profile-edit-cancel" class="btn text-btn">Discard</button>
                 <button type="submit" class="btn primary-btn">Apply Coordinates</button>

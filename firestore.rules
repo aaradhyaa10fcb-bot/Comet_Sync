@@ -2,21 +2,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: any authenticated user can read all users,
-    // but can only write their own document
+    // Users:
     match /users/{userId} {
-      allow read: if request.auth != null;
+      // Allow read if user is public, or if requester is the user, or if requester is in followers/allowedUsers
+      allow read: if request.auth != null && (
+        !resource.data.get('isPrivate', false) || 
+        request.auth.uid == userId ||
+        (resource.data.get('followers', [])).hasAny([request.auth.uid]) ||
+        (resource.data.get('allowedUsers', [])).hasAny([request.auth.uid])
+      );
+      
       allow create: if request.auth != null && request.auth.uid == userId;
+      
       allow update: if request.auth != null && (
         request.auth.uid == userId ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers'])
       );
+      
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Posts: any authenticated user can read,
-    // any authenticated user can create,
-    // only the author can update/delete
+    // Posts: any authenticated user can read (UI handles hiding), author updates
     match /posts/{postId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
@@ -44,9 +50,15 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
-    // Communities: any authenticated user can read/create
+    // Communities:
     match /communities/{communityId} {
-      allow read: if request.auth != null;
+      // Allow read if community is public, or requester is creator, or requester is in allowedUsers
+      allow read: if request.auth != null && (
+        !resource.data.get('isPrivate', false) || 
+        request.auth.uid == resource.data.creatorId ||
+        (resource.data.get('allowedUsers', [])).hasAny([request.auth.uid])
+      );
+      
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.creatorId;
     }
